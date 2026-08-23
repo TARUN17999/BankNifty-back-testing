@@ -1,0 +1,5 @@
+# Only needed locally to run fetch_kite_data.py -- NOT part of the deployed
+# Streamlit app's requirements.txt (kept separate so the Cloud build stays
+# lean and isn't slowed down by a dependency the app itself never imports).
+kiteconnect
+pandas

@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 .streamlit/secrets.toml
+.kite_session.json
+.kite_cache/
+*.csv

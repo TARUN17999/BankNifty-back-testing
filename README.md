@@ -40,6 +40,34 @@ option-premium data. In the app's sidebar you can:
 - **Synthetic demo data** — instant, no setup, purely for trying out the
   app and the strategy interface. Not real market data.
 
+### Fetching real data from Zerodha Kite Connect
+
+If you have a Zerodha account + Kite Connect API subscription, `fetch_kite_data.py`
+pulls real historical OHLCV data and saves it straight to an app-ready CSV.
+
+```bash
+.venv\Scripts\python -m pip install -r requirements-datafetch.txt
+
+# set these first (see the script's docstring for details) — never commit them
+set KITE_API_KEY=your_api_key
+set KITE_API_SECRET=your_api_secret
+
+# Bank Nifty INDEX, 2 years of daily candles (best for testing signal logic)
+.venv\Scripts\python fetch_kite_data.py --symbol "NIFTY BANK" --exchange NSE ^
+  --from 2023-08-01 --to 2025-08-23 --interval day --out banknifty_index_daily.csv
+
+# a specific weekly option contract, 5-min candles (realistic premium P&L,
+# but only ~1 week of history since Bank Nifty options are weekly)
+.venv\Scripts\python fetch_kite_data.py --symbol "BANKNIFTY25AUG50000CE" --exchange NFO ^
+  --from 2025-08-18 --to 2025-08-21 --interval 5minute --out bn_50000ce_sample.csv
+```
+
+Not sure of the exact option tradingsymbol? Search for it first:
+`fetch_kite_data.py --list-instruments BANKNIFTY`.
+
+Downloaded CSVs are gitignored (`*.csv`) — real market data doesn't get
+pushed to the public repo. Just upload the file in the app's sidebar.
+
 ## Writing a strategy
 
 See the **Help & interface** tab in the app for the full contract. Short
