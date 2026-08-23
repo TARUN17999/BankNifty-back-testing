@@ -90,7 +90,69 @@ def on_candle(ctx, candle, history):
         ctx.log(f"EXIT signal: RSI {current_rsi:.1f} above {ctx.params['exit_above']}")
 '''
 
+SMA200_RSI_REGIME = '''\
+"""200-SMA regime switch with RSI(4) mean-reversion (long-only).
+
+- Above the 200-period SMA: trend regime — go long and STAY long no matter
+  what RSI does, until price falls back below the SMA.
+- Below the 200-period SMA: mean-reversion regime — go long only when
+  RSI(4) drops under 20, and exit only when RSI(4) rises above 60.
+
+Note: "200 SMA" classically means 200 *daily* candles. If you're backtesting
+on intraday candles, either load daily data or lower `sma_period` in
+initialize() to match what you actually want (e.g. 200 five-minute candles
+is a very different, much faster line than a 200-day SMA).
+"""
+
+def initialize(ctx):
+    ctx.params.setdefault("sma_period", 200)
+    ctx.params.setdefault("rsi_period", 4)
+    ctx.params.setdefault("rsi_buy_below", 20)
+    ctx.params.setdefault("rsi_sell_above", 60)
+
+
+def _rsi(closes, period):
+    delta = closes.diff()
+    gain = delta.clip(lower=0)
+    loss = -delta.clip(upper=0)
+    avg_gain = gain.rolling(period).mean()
+    avg_loss = loss.rolling(period).mean()
+    rs = avg_gain / avg_loss.replace(0, float("nan"))
+    return 100 - (100 / (1 + rs))
+
+
+def on_candle(ctx, candle, history):
+    sma_period = ctx.params["sma_period"]
+    rsi_period = ctx.params["rsi_period"]
+
+    if len(history) < sma_period + 1:
+        return  # not enough candles yet for the SMA
+
+    closes = history["close"]
+    sma = closes.rolling(sma_period).mean().iloc[-1]
+    rsi4 = _rsi(closes, rsi_period).iloc[-1]
+    if sma != sma or rsi4 != rsi4:  # NaN guard
+        return
+
+    above_sma = candle["close"] > sma
+
+    if ctx.position == 0:
+        if above_sma:
+            ctx.buy(lots=1)
+            ctx.log(f"BUY (trend regime): close {candle['close']:.2f} above SMA{sma_period} {sma:.2f}")
+        elif rsi4 < ctx.params["rsi_buy_below"]:
+            ctx.buy(lots=1)
+            ctx.log(f"BUY (mean-reversion): RSI{rsi_period} {rsi4:.1f} below {ctx.params['rsi_buy_below']}")
+    else:  # already long
+        if above_sma:
+            pass  # trend regime overrides — hold regardless of RSI
+        elif rsi4 > ctx.params["rsi_sell_above"]:
+            ctx.exit_position(reason="rsi_overbought")
+            ctx.log(f"EXIT: RSI{rsi_period} {rsi4:.1f} above {ctx.params['rsi_sell_above']} (below SMA{sma_period})")
+'''
+
 EXAMPLES = {
     "SMA crossover": SMA_CROSSOVER,
     "RSI mean-reversion": RSI_MEAN_REVERSION,
+    "200SMA regime + RSI(4)": SMA200_RSI_REGIME,
 }
