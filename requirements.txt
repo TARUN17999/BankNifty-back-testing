@@ -1,0 +1,7 @@
+streamlit>=1.57
+streamlit-ace
+pandas
+numpy
+plotly
+altair
+yfinance
